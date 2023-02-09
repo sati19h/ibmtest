@@ -30,10 +30,11 @@ data "azurerm_resource_group" "resource_group" {
 //Module to create security group and security group rules
 module "network-security-group" {
   source                = "Azure/network-security-group/azurerm"
+  count                 = 3 
   version               = "~> 3.6.0"
   resource_group_name   = data.azurerm_resource_group.resource_group.name
   location              = data.azurerm_resource_group.resource_group.location # Optional; if not provided, will use Resource Group location
-  security_group_name   = "${var.az_resource_prefix}-sg"
+  security_group_name   = "${local.az_resource_prefix}-sg-${count.index +1}"
   source_address_prefix = ["*"]
   custom_rules = [
     {
@@ -62,7 +63,7 @@ module "network-security-group" {
     },
   ]
   tags = {
-    ibm-satellite = var.az_resource_prefix
+    ibm-satellite = local.az_resource_prefix
   }
   depends_on = [data.azurerm_resource_group.resource_group]
 }
@@ -73,18 +74,18 @@ module "vnet" {
   source              = "Azure/vnet/azurerm"
   version             = "2.7.0"
   resource_group_name = data.azurerm_resource_group.resource_group.name
-  vnet_name           = "${var.az_resource_prefix}-vpc"
+  vnet_name           = "${local.az_resource_prefix}-vpc"
   address_space       = ["10.20.160.0/22"]
   subnet_prefixes     = ["10.20.160.0/26", "10.20.160.64/28", "10.20.160.80/28"]
-  subnet_names        = ["${var.az_resource_prefix}-subnet-1", "${var.az_resource_prefix}-subnet-2", "${var.az_resource_prefix}-subnet-3"]
+  subnet_names        = ["${local.az_resource_prefix}-subnet-1", "${local.az_resource_prefix}-subnet-2", "${local.az_resource_prefix}-subnet-3"]
   nsg_ids = {
-    "${var.az_resource_prefix}-subnet-1" = module.network-security-group.network_security_group_id
-    "${var.az_resource_prefix}-subnet-2" = module.network-security-group.network_security_group_id
-    "${var.az_resource_prefix}-subnet-3" = module.network-security-group.network_security_group_id
+    "${local.az_resource_prefix}-subnet-1" = module.network-security-group[0].network_security_group_id,
+    "${local.az_resource_prefix}-subnet-2" = module.network-security-group[1].network_security_group_id,
+    "${local.az_resource_prefix}-subnet-3" = module.network-security-group[2].network_security_group_id
   }
 
   tags = {
-    ibm-satellite = var.az_resource_prefix
+    ibm-satellite = local.az_resource_prefix
   }
 }
 
@@ -92,18 +93,18 @@ module "vnet" {
 resource "azurerm_network_interface" "az_nic" {
   depends_on          = [data.azurerm_resource_group.resource_group]
   for_each            = local.hosts_flattened
-  name                = "${var.az_resource_prefix}-nic-${each.key}"
+  name                = "${local.az_resource_prefix}-nic-${each.key}"
   resource_group_name = data.azurerm_resource_group.resource_group.name
   location            = data.azurerm_resource_group.resource_group.location
 
   ip_configuration {
-    name                          = "${var.az_resource_prefix}-nic-internal"
+    name                          = "${local.az_resource_prefix}-nic-internal"
     subnet_id                     = element(module.vnet.vnet_subnets, each.key)
     private_ip_address_allocation = "Dynamic"
     primary                       = true
   }
   tags = {
-    ibm-satellite = var.az_resource_prefix
+    ibm-satellite = local.az_resource_prefix
   }
 }
 resource "tls_private_key" "rsa_key" {
@@ -116,7 +117,7 @@ resource "tls_private_key" "rsa_key" {
 resource "azurerm_linux_virtual_machine" "az_host" {
   #depends_on            = [data.azurerm_resource_group.resource_group, module.satellite-location]
   for_each              = local.hosts_flattened
-  name                  = "${var.az_resource_prefix}-vm-${each.key}"
+  name                  = "${local.az_resource_prefix}-vm-${each.key}"
   resource_group_name   = data.azurerm_resource_group.resource_group.name
   location              = data.azurerm_resource_group.resource_group.location
   size                  = each.value.instance_type
@@ -143,7 +144,7 @@ resource "azurerm_linux_virtual_machine" "az_host" {
 }
 resource "azurerm_managed_disk" "data_disk" {
   for_each             = local.hosts_flattened
-  name                 = "${var.az_resource_prefix}-disk-${each.key}"
+  name                 = "${local.az_resource_prefix}-disk-${each.key}"
   location             = data.azurerm_resource_group.resource_group.location
   resource_group_name  = data.azurerm_resource_group.resource_group.name
   storage_account_type = "Premium_LRS"
@@ -157,5 +158,24 @@ resource "azurerm_virtual_machine_data_disk_attachment" "disk_attach" {
   managed_disk_id    = azurerm_managed_disk.data_disk[each.key].id
   virtual_machine_id = azurerm_linux_virtual_machine.az_host[each.key].id
   lun                = "10"
+  caching            = "ReadWrite"
+}
+
+resource "azurerm_managed_disk" "data_disk1" {
+  for_each             = local.hosts_flattened
+  name                 = "${local.az_resource_prefix}-disk1-${each.key}"
+  location             = data.azurerm_resource_group.resource_group.location
+  resource_group_name  = data.azurerm_resource_group.resource_group.name
+  storage_account_type = "Premium_LRS"
+  create_option        = "Empty"
+  disk_size_gb         = each.value.data_disk
+  zones                = [each.value.zone]
+}
+
+resource "azurerm_virtual_machine_data_disk_attachment" "disk1_attach" {
+  for_each           = { for host, values in local.hosts_flattened: host => values if values.disk1_size_gb != 0}
+  managed_disk_id    = azurerm_managed_disk.data_disk1[each.key].id
+  virtual_machine_id = azurerm_linux_virtual_machine.az_host[each.key].id
+  lun                = "5"
   caching            = "ReadWrite"
 }

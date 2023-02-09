@@ -38,7 +38,7 @@ variable "az_resource_group" {
 variable "az_region" {
   description = "Azure Region"
   type        = string
-  default     = "eastus"
+  default     = "Canada Central"
 }
 /*variable "ibmcloud_api_key" {
   description = "IBM Cloud API Key"
@@ -54,7 +54,7 @@ variable "ibm_resource_group" {
 # # Azure Resources Variables
 # ##################################################
 
-variable "az_resource_prefix" {
+/*variable "az_resource_prefix" {
   description = "Name to be used on all Azure resources as prefix"
   type        = string
   default     = "satellite-azure"
@@ -62,7 +62,37 @@ variable "az_resource_prefix" {
     condition     = can(regex("^[a-z0-9-]+$", var.az_resource_prefix))
     error_message = "Variable az_resource_prefix should always be lowercase alphanumeric, and may contain hyphens."
   }
+}*/
+
+variable "ctc-type" {
+    description = "ctc type"
+    type         = string
+      
 }
+
+variable "environment" {
+  description = "environment"
+    type         = string
+  
+}
+variable "subscriptionvalue" {
+   description = "subscriptionvalue"
+    type         = string
+  
+}
+
+variable "application" {
+  description = "application"
+    type         = string
+  
+}
+
+variable "regionvalue" {
+  description = "region"
+    type         = string
+}
+
+
 variable "ssh_public_key" {
   description = "SSH Public Key. Get your ssh key by running `ssh-key-gen` command"
   type        = string
@@ -88,6 +118,17 @@ variable "addl_host_count" {
   default     = null
 }
 
+variable "st_host_count" {
+  description = "The total number of additional Azure vms"
+  type        = number
+  default     = null
+}
+
+variable "bh_host_count" {
+  description = "The total number of additional Azure vms"
+  type        = number
+  default     = null
+}
 variable "cp_hosts" {
   description = "A map of Azure host objects used to create the location control plane, including instance_type and count. Control plane count value should always be in multiples of 3, such as 3, 6, 9, or 12 hosts."
   type = list(
@@ -103,7 +144,8 @@ variable "cp_hosts" {
       instance_type = "Standard_D4as_v4"
       count         = 3
     }
-  ]
+     
+    ]
 
   validation {
     condition     = ! contains([for host in var.cp_hosts : (host.count > 0)], false)
@@ -119,6 +161,7 @@ variable "cp_hosts" {
     error_message = "Each object should have an instance_type."
   }
 }
+
 
 variable "addl_hosts" {
   description = "A list of Azure host objects used for provisioning services on your location after setup, including instance_type and count."
@@ -153,6 +196,63 @@ variable "worker_image_version" {
   type        = string
   default     = "latest"
 }
+
+
+variable "st_hosts" {
+  description = "A list of Azure host objects used for provisioning services on your location after setup, including instance_type and count."
+  type = list(
+    object(
+      {
+        instance_type = string
+        count         = number
+      }
+    )
+  )
+  default = []
+  validation {
+    condition     = ! contains([for host in var.st_hosts : (host.count > 0)], false)
+    error_message = "All hosts must have a count of at least 1."
+  }
+
+  validation {
+    condition     = can([for host in var.st_hosts : host.instance_type])
+    error_message = "Each object should have an instance_type."
+  }
+}
+
+variable "bh_hosts" {
+  description = "A list of Azure host objects used for provisioning services on your location after setup, including instance_type and count."
+  type = list(
+    object(
+      {
+        instance_type = string
+        count         = number
+      }
+    )
+  )
+  default = []
+  validation {
+    condition     = ! contains([for host in var.bh_hosts : (host.count > 0)], false)
+    error_message = "All hosts must have a count of at least 1."
+  }
+
+  validation {
+    condition     = can([for host in var.bh_hosts : host.instance_type])
+    error_message = "Each object should have an instance_type."
+  }
+}
+
+/*variable "worker_image_sku" {
+  description = "Operating system image SKU for the workers created"
+  type        = string
+  default     = "7-LVM"
+}
+
+variable "worker_image_version" {
+  description = "Operating system image version for the workers created"
+  type        = string
+  default     = "latest"
+}*/
 # ##################################################
 # # IBM CLOUD Satellite Location Variables
 # ##################################################
@@ -181,7 +281,7 @@ variable "managed_from" {
 variable "location_zones" {
   description = "Allocate your hosts across these three zones"
   type        = list(string)
-  default     = ["eastus-1", "eastus-2", "eastus-3"]
+  default     = ["Canada Central-1", "Canada Central-2", "Canada Central-3"]
 }
 
 variable "location_bucket" {

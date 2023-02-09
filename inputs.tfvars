@@ -13,7 +13,7 @@ client_id         = "28f99b91-065c-4b50-a737-24340667743e"
 tenant_id         = "2535c997-5831-46fd-ab9e-74b5d71776af"
 client_secret     = "sHt8Q~GLDJlOHmcWE-hnEO6bS0sa-N4sm-2SAasD"
 subscription_id   = "ce32225a-7157-44a8-a8dd-e600fd3d9f85"
-az_resource_group = "satellite-azure"
+az_resource_group = "satellite-azure-ibm"
 
 
 ##############################################################################
@@ -21,8 +21,17 @@ az_resource_group = "satellite-azure"
 ##############################################################################
 location       = "satellite-azure"
 managed_from   = "wdc"
-location_zones = ["eastus-1", "eastus-2", "eastus-3"]
+location_zones = ["Canada Central-1", "Canada Central-2", "Canada Central-3"]
 
+
+##############################################################################
+## Resorce Name
+##############################################################################
+ctc-type = "corp"
+environment = "dev"
+subscriptionvalue = "007"
+application =  "ocpmcp"
+regionvalue = "cc"
 
 ##############################################################################
 ## ROKS Cluster
@@ -45,5 +54,21 @@ cp_hosts = [
         instance_type = "Standard_D4as_v4"
         # instance_type = "Standard_D16ds_v4"     # 16 vCPU - 64 GB AM
         count         = 3
+    }
+]
+
+st_hosts = [
+    {
+        instance_type = "Standard_D4as_v4"
+        # instance_type = "Standard_D16ds_v4"     # 16 vCPU - 64 GB AM
+        count         = 3
+    }
+]
+
+bh_hosts = [
+    {
+        instance_type = "Standard_D4as_v4"
+        # instance_type = "Standard_D16ds_v4"     # 16 vCPU - 64 GB AM
+        count         = 2
     }
 ]
